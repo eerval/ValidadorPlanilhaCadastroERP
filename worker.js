@@ -84,44 +84,48 @@ function validateLayout(headers) {
 }
 
 // ==========================================================
-// NOVO: FUNÇÃO DE LIMPEZA E NORMALIZAÇÃO DE PREÇOS (CORREÇÃO CRÍTICA)
+// CORREÇÃO FINAL: FUNÇÃO DE LIMPEZA E NORMALIZAÇÃO DE PREÇOS
+// A chave é o .toFixed(2) para garantir as duas casas decimais na saída.
 // ==========================================================
 /**
- * Limpa e normaliza um valor de preço (R$ 1.234,56) para o formato numérico do JS (1234.56).
- * 1. Remove caracteres monetários e espaços.
- * 2. Remove o ponto (.) usado como separador de milhar no BR.
- * 3. Substitui a vírgula (,) por ponto (.) para o JS.
+ * Limpa, normaliza para float JS (ponto decimal) e formata com duas casas decimais.
  * @param {string} value O valor do campo de preço.
- * @returns {string} O valor limpo e formatado como string (ex: "1234.56").
+ * @returns {string} O valor limpo e formatado com duas casas decimais (ex: "1234.56" ou "0.00").
  */
 function cleanAndNormalizePrice(value) {
     if (value === null || value === undefined) {
-        return '';
+        return '0.00';
     }
     let strValue = String(value).trim();
     if (strValue === '') {
-        return '';
+        return '0.00';
     }
 
     // 1. Remove R$, e espaços
     strValue = strValue.replace(/[R$\s]/g, ''); 
     
     // 2. Remove o separador de milhar (ponto)
-    // Ex: "1.000,50" -> "1000,50"
     strValue = strValue.replace(/\./g, ''); 
     
     // 3. Substitui o separador decimal (vírgula) pelo ponto
-    // Ex: "1000,50" -> "1000.50"
     strValue = strValue.replace(/,/g, '.');
     
-    return strValue;
+    const numericValue = parseFloat(strValue);
+
+    // 4. Verifica se é válido e formata para 2 casas decimais.
+    if (isNaN(numericValue) || numericValue < 0) {
+        return '0.00';
+    }
+
+    // A CHAVE DA CORREÇÃO: Formata o número com exatamente 2 casas decimais
+    // Ex: 259 vira 259.00; 1250.99 permanece 1250.99
+    return numericValue.toFixed(2); 
 }
 
 // 4. Lógica de Validação e Correção de Dados (Movida do HTML)
 function runDataValidation(spreadsheetData) {
     const results = [];
     
-    // A validação e correção ocorrem aqui, em uma thread separada.
     spreadsheetData.forEach(row => {
         const errors = [];
         const corrections = [];
@@ -246,61 +250,23 @@ function runDataValidation(spreadsheetData) {
             }
         }
         
-        // ==========================================================
-        // CORREÇÃO CRÍTICA APLICADA: PREÇO DE CUSTO
-        // ==========================================================
+        // PREÇO DE CUSTO - Validação e correção
         const precoCustoOriginal = row['PREÇO DE CUSTO'];
-        const precoCustoLimpo = cleanAndNormalizePrice(precoCustoOriginal);
+        const precoCustoCorrigido = cleanAndNormalizePrice(precoCustoOriginal);
         
-        if (precoCustoLimpo === '') {
-            const newValue = '0';
-            if (precoCustoOriginal && precoCustoOriginal.toString().trim() !== '0') {
-                corrections.push({ column: 'PREÇO DE CUSTO', from: precoCustoOriginal, to: newValue });
-            }
-            row['PREÇO DE CUSTO'] = newValue;
-        } else {
-            const precoCustoNumerico = parseFloat(precoCustoLimpo);
-            
-            if (isNaN(precoCustoNumerico) || precoCustoNumerico < 0) {
-                const newValue = '0';
-                corrections.push({ column: 'PREÇO DE CUSTO', from: precoCustoOriginal, to: newValue });
-                row['PREÇO DE CUSTO'] = newValue;
-            } else {
-                // Mantemos o valor limpo e normalizado (ex: "1234.56") para o array
-                if (precoCustoLimpo !== precoCustoOriginal.toString().trim()) {
-                     corrections.push({ column: 'PREÇO DE CUSTO', from: precoCustoOriginal, to: precoCustoLimpo });
-                }
-                row['PREÇO DE CUSTO'] = precoCustoLimpo;
-            }
+        if (precoCustoCorrigido !== precoCustoOriginal.toString().trim()) {
+            corrections.push({ column: 'PREÇO DE CUSTO', from: precoCustoOriginal, to: precoCustoCorrigido });
         }
+        row['PREÇO DE CUSTO'] = precoCustoCorrigido;
         
-        // ==========================================================
-        // CORREÇÃO CRÍTICA APLICADA: PREÇO DE VENDA
-        // ==========================================================
+        // PREÇO DE VENDA - Validação e correção
         const precoVendaOriginal = row['PREÇO DE VENDA'];
-        const precoVendaLimpo = cleanAndNormalizePrice(precoVendaOriginal);
+        const precoVendaCorrigido = cleanAndNormalizePrice(precoVendaOriginal);
         
-        if (precoVendaLimpo === '') {
-            const newValue = '0';
-            if (precoVendaOriginal && precoVendaOriginal.toString().trim() !== '0') {
-                corrections.push({ column: 'PREÇO DE VENDA', from: precoVendaOriginal, to: newValue });
-            }
-            row['PREÇO DE VENDA'] = newValue;
-        } else {
-            const precoVendaNumerico = parseFloat(precoVendaLimpo);
-            
-            if (isNaN(precoVendaNumerico) || precoVendaNumerico < 0) {
-                const newValue = '0';
-                corrections.push({ column: 'PREÇO DE VENDA', from: precoVendaOriginal, to: newValue });
-                row['PREÇO DE VENDA'] = newValue;
-            } else {
-                // Mantemos o valor limpo e normalizado (ex: "1234.56") para o array
-                if (precoVendaLimpo !== precoVendaOriginal.toString().trim()) {
-                     corrections.push({ column: 'PREÇO DE VENDA', from: precoVendaOriginal, to: precoVendaLimpo });
-                }
-                row['PREÇO DE VENDA'] = precoVendaLimpo;
-            }
+        if (precoVendaCorrigido !== precoVendaOriginal.toString().trim()) {
+            corrections.push({ column: 'PREÇO DE VENDA', from: precoVendaOriginal, to: precoVendaCorrigido });
         }
+        row['PREÇO DE VENDA'] = precoVendaCorrigido;
         
         // Dimensões e pesos - Preencher com 0
         const dimensionFields = ['ALTURA (cm)', 'LARGURA (cm)', 'PROFUNDIDADE (cm)', 'PESO LIQUIDO (kg)', 'PESO BRUTO (kg)'];
