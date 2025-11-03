@@ -1,7 +1,6 @@
 // ==========================================================
 // worker.js
 // Script executado em uma thread separada (Web Worker)
-// Contém o processamento pesado de leitura e validação
 // ==========================================================
 
 // 1. Importar a biblioteca SheetJS (deve ser feito via importScripts)
@@ -85,20 +84,20 @@ function validateLayout(headers) {
 
 // ==========================================================
 // CORREÇÃO FINAL: FUNÇÃO DE LIMPEZA E NORMALIZAÇÃO DE PREÇOS
-// A chave é o .toFixed(2) para garantir as duas casas decimais na saída.
+// Inclui formatação final com vírgula para exportação BR.
 // ==========================================================
 /**
- * Limpa, normaliza para float JS (ponto decimal) e formata com duas casas decimais.
+ * Limpa, normaliza para float JS e formata com duas casas decimais no padrão BR (vírgula).
  * @param {string} value O valor do campo de preço.
- * @returns {string} O valor limpo e formatado com duas casas decimais (ex: "1234.56" ou "0.00").
+ * @returns {string} O valor limpo e formatado com duas casas decimais (ex: "1234,56" ou "0,00").
  */
 function cleanAndNormalizePrice(value) {
     if (value === null || value === undefined) {
-        return '0.00';
+        return '0,00';
     }
     let strValue = String(value).trim();
     if (strValue === '') {
-        return '0.00';
+        return '0,00';
     }
 
     // 1. Remove R$, e espaços
@@ -107,19 +106,22 @@ function cleanAndNormalizePrice(value) {
     // 2. Remove o separador de milhar (ponto)
     strValue = strValue.replace(/\./g, ''); 
     
-    // 3. Substitui o separador decimal (vírgula) pelo ponto
+    // 3. Substitui o separador decimal (vírgula) pelo ponto (para o JS)
     strValue = strValue.replace(/,/g, '.');
     
     const numericValue = parseFloat(strValue);
 
-    // 4. Verifica se é válido e formata para 2 casas decimais.
+    // 4. Verifica se é válido
     if (isNaN(numericValue) || numericValue < 0) {
-        return '0.00';
+        return '0,00';
     }
 
-    // A CHAVE DA CORREÇÃO: Formata o número com exatamente 2 casas decimais
-    // Ex: 259 vira 259.00; 1250.99 permanece 1250.99
-    return numericValue.toFixed(2); 
+    // 5. Formata o número com 2 casas decimais (padrão JS com ponto)
+    let formattedValue = numericValue.toFixed(2); 
+
+    // 6. A CHAVE DA CORREÇÃO: Troca o ponto decimal de volta para vírgula para a saída no Excel BR
+    // Ex: "1250.99" vira "1250,99"
+    return formattedValue.replace('.', ','); 
 }
 
 // 4. Lógica de Validação e Correção de Dados (Movida do HTML)
@@ -273,8 +275,16 @@ function runDataValidation(spreadsheetData) {
         
         dimensionFields.forEach(field => {
             if (!row[field] || row[field].toString().trim() === '') {
-                corrections.push({ column: field, from: '', to: '0' });
-                row[field] = '0';
+                corrections.push({ column: field, from: '', to: '0,00' });
+                row[field] = '0,00';
+            } else {
+                // Aplica a mesma lógica de limpeza e formatação para dimensões/pesos
+                const original = row[field];
+                const clean = cleanAndNormalizePrice(original);
+                if (clean !== original.toString().trim()) {
+                     corrections.push({ column: field, from: original, to: clean });
+                }
+                row[field] = clean;
             }
         });
         
