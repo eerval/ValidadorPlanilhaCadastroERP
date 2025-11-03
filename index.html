@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validador de Planilhas - Professional</title>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --secondary: #7209b7;
+            --success: #4cc9f0;
+            --danger: #f72585;
+            --warning: #f8961e;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --border: #dee2e6;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --radius: 8px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .subtitle {
+            color: var(--gray);
+            font-size: 1.1rem;
+        }
+        
+        .app-container {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            display: flex;
+            background: var(--light);
+            padding: 0;
+        }
+        
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            position: relative;
+            font-weight: 500;
+            color: var(--gray);
+        }
+        
+        .progress-step.active {
+            color: var(--primary);
+            background: rgba(67, 97, 238, 0.1);
+        }
+        
+        .progress-step.completed {
+            color: var(--success);
+        }
+        
+        .progress-step::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+            border-left: 10px solid white;
+            z-index: 1;
+        }
+        
+        .step-container {
+            padding: 30px;
+            display: none;
+        }
+        
+        .step-container.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .step-header {
+            margin-bottom: 20px;
+        }
+        
+        .step-title {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        
+        .step-description {
+            color: var(--gray);
+        }
+        
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(67, 97, 238, 0.05);
+        }
+        
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(67, 97, 238, 0.1);
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .progress-container {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .progress-bar-inner {
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        .table-container {
+            max-height: 500px;
+            overflow: auto;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        th {
+            background: var(--light);
+            position: sticky;
+            top: 0;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background: rgba(0, 0, 0, 0.02);
+        }
+        
+        .editable-cell {
+            outline: none;
+        }
+        
+        .editable-cell:focus {
+            background: rgba(67, 97, 238, 0.1);
+            border: 1px solid var(--primary);
+        }
+        
+        .row-valid {
+            background: rgba(76, 201, 240, 0.1);
+        }
+        
+        .row-error {
+            background: rgba(247, 37, 133, 0.1);
+        }
+        
+        .error-cell {
+            background: rgba(247, 37, 133, 0.2);
+            border: 1px solid var(--danger);
+        }
+        
+        .highlight-cell {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { background-color: rgba(67, 97, 238, 0.2); }
+            50% { background-color: rgba(67, 97, 238, 0.5); }
+            100% { background-color: rgba(67, 97, 238, 0.2); }
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            flex: 1;
+            margin: 0 10px;
+        }
+        
+        /* NOVO: Estilo para indicar que o cartão de erro é clicável */
+        .stat-card.stat-error {
+            cursor: pointer; 
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+        
+        .stat-valid .stat-number {
+            color: var(--success);
+        }
+        
+        .stat-error .stat-number {
+            color: var(--danger);
+        }
+        
+        .stat-total .stat-number {
+            color: var(--primary);
+        }
+        
+        .log-container {
+            max-height: 400px;
+            overflow: auto;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+        }
+        
+        .log-item {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .log-item:last-child {
+            border-bottom: none;
+        }
+        
+        .log-error {
+            border-left: 4px solid var(--danger);
+        }
+        
+        .log-success {
+            border-left: 4px solid var(--success);
+        }
+        
+        .log-row-info {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .log-message {
+            color: var(--gray);
+        }
+        
+        .success-screen {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .success-icon {
+            font-size: 64px;
+            color: var(--success);
+            margin-bottom: 20px;
+        }
+        
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn i {
+            margin-right: 8px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #3ab0d9;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #e01a6f;
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #e0861b;
+        }
+        
+        .btn:disabled {
+            background: var(--gray);
+            cursor: not-allowed;
+        }
+        
+        .file-info {
+            background: var(--light);
+            padding: 15px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .file-details {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background: var(--dark);
+            color: white;
+            text-align: center;
+            border-radius: var(--radius);
+            padding: 10px;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .auto-fix-btn {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .auto-fix-btn:hover {
+            background: #61159e;
+        }
+        
+        .layout-error {
+            background: rgba(247, 37, 133, 0.1);
+            border: 1px solid var(--danger);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .layout-error h3 {
+            color: var(--danger);
+            margin-bottom: 10px;
+        }
+        
+        .layout-error ul {
+            margin-left: 20px;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .loading-spinner {
+            background: white;
+            padding: 30px;
+            border-radius: var(--radius);
+            text-align: center;
+            min-width: 300px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        .loading-spinner p {
+            margin-top: 10px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .stats {
+                flex-direction: column;
+            }
+            
+            .stat-card {
+                margin: 5px 0;
+            }
+            
+            .navigation {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Validando planilha...</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Validador de Planilhas</h1>
+            <p class="subtitle">Importe, valide e corrija suas planilhas automaticamente</p>
+        </header>
+        
+        <div class="app-container">
+            <div class="progress-bar">
+                <div class="progress-step active" id="step-indicator-1">
+                    <span>1. Importar</span>
+                </div>
+                <div class="progress-step" id="step-indicator-2">
+                    <span>2. Visualizar</span>
+                </div>
+                <div class="progress-step" id="step-indicator-3">
+                    <span>3. Validar</span>
+                </div>
+            </div>
+            
+            <div id="step-1" class="step-container active">
+                <div class="step-header">
+                    <h2 class="step-title">Importar Planilha</h2>
+                    <p class="step-description">Faça upload da planilha que deseja validar. Formatos suportados: XLSX, CSV.</p>
+                </div>
+                
+                <div class="file-info" id="file-info">
+                    <div class="file-name" id="file-name"></div>
+                    <div class="file-details" id="file-details"></div>
+                </div>
+                
+                <div class="upload-area" id="upload-area">
+                    <div class="upload-icon">📊</div>
+                    <p>Arraste e solte sua planilha aqui ou clique para selecionar</p>
+                    <p class="text-muted">Formatos suportados: .xlsx, .csv</p>
+                    <input type="file" id="file-input" class="file-input" accept=".xlsx,.csv">
+                </div>
+                
+                <div class="progress-container" id="progress-container">
+                    <div class="progress-bar-inner">
+                        <div class="progress" id="progress-bar"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text">Processando...</div>
+                </div>
+                
+                <div class="navigation">
+                    <button id="btn-download-template" class="btn btn-warning">
+                        <i>📥</i> Baixar Modelo
+                    </button>
+                    <button id="btn-next-1" class="btn btn-primary" disabled>
+                        <i>→</i> Avançar
+                    </button>
+                </div>
+            </div>
+            
+            <div id="step-2" class="step-container">
+                <div class="step-header">
+                    <h2 class="step-title">Visualizar e Editar</h2>
+                    <p class="step-description">Visualize a planilha importada e faça edições inline, se necessário.</p>
+                </div>
+                
+                <div class="table-container">
+                    <table id="preview-table">
+                        <thead>
+                            </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+                
+                <div class="navigation">
+                    <button id="btn-back-2" class="btn btn-warning">
+                        <i>←</i> Voltar
+                    </button>
+                    <button id="btn-validate" class="btn btn-primary">
+                        <i>✓</i> Validar Planilha
+                    </button>
+                </div>
+            </div>
+            
+            <div id="step-3" class="step-container">
+                <div class="step-header">
+                    <h2 class="step-title">Resultados da Validação</h2>
+                    <p class="step-description">Confira os resultados da validação e corrija os erros encontrados.</p>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-card stat-total">
+                        <div class="stat-number" id="total-rows">0</div>
+                        <div class="stat-label">Total de Linhas</div>
+                    </div>
+                    <div class="stat-card stat-valid">
+                        <div class="stat-number" id="valid-rows">0</div>
+                        <div class="stat-label">Linhas Válidas</div>
+                    </div>
+                    <div class="stat-card stat-error"> 
+                        <div class="stat-number" id="error-rows">0</div>
+                        <div class="stat-label">Linhas com Erros (Clique para navegar)</div>
+                    </div>
+                </div>
+                
+                <div class="log-container" id="log-container">
+                    </div>
+                
+                <div class="navigation">
+                    <button id="btn-back-3" class="btn btn-warning">
+                        <i>←</i> Voltar para Edição
+                    </button>
+                    <button id="btn-download" class="btn btn-success" disabled>
+                        <i>↓</i> Baixar Planilha Corrigida
+                    </button>
+                </div>
+            </div>
+            
+            <div id="success-screen" class="step-container" style="display: none;">
+                <div class="success-screen">
+                    <div class="success-icon">✅</div>
+                    <h2>Validação Concluída com Sucesso!</h2>
+                    <p>Sua planilha foi validada e todas as correções necessárias foram aplicadas.</p>
+                    <div class="navigation">
+                        <button id="btn-download-final" class="btn btn-success">
+                            <i>↓</i> Baixar Planilha Corrigida
+                        </button>
+                        <button id="btn-new-validation" class="btn btn-primary">
+                            <i>↺</i> Nova Validação
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script>
+        // ============================
+        // VARIÁVEIS GLOBAIS
+        // ============================
+        let spreadsheetData = [];
+        let headers = [];
+        let validationResults = [];
+        let currentStep = 1;
+        let layoutValid = false;
+        let dataProcessorWorker = null; 
+        
+        // NOVO: Variável para navegação de logs de erro
+        let currentErrorLogIndex = 0; 
+        
+        const expectedLayout = [
+            "SKU EXTERNO", "Código de Barras", "Descrição", "MARCA", "CATEGORIA", "TAM/QTDE",
+            "SABOR/COR", "NCM", "UN COMERCIAL", "ORIGEM DO PRODUTO", "CEST", "unidade/fracao",
+            "REGRA PADRAO", "PREÇO DE CUSTO", "PREÇO DE VENDA", "ALTURA (cm)", "LARGURA (cm)",
+            "PROFUNDIDADE (cm)", "PESO LIQUIDO (kg)", "PESO BRUTO (kg)", "URL FOTO", "ID Interno"
+        ];
+        
+        // ============================
+        // ELEMENTOS DOM
+        // ============================
+        const step1 = document.getElementById('step-1');
+        const step2 = document.getElementById('step-2');
+        const step3 = document.getElementById('step-3');
+        const successScreen = document.getElementById('success-screen');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        
+        const stepIndicators = [
+            document.getElementById('step-indicator-1'),
+            document.getElementById('step-indicator-2'),
+            document.getElementById('step-indicator-3')
+        ];
+        
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const fileInfo = document.getElementById('file-info');
+        const fileName = document.getElementById('file-name');
+        const fileDetails = document.getElementById('file-details');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        
+        const btnNext1 = document.getElementById('btn-next-1');
+        const btnDownloadTemplate = document.getElementById('btn-download-template');
+        const btnBack2 = document.getElementById('btn-back-2');
+        const btnValidate = document.getElementById('btn-validate');
+        const btnBack3 = document.getElementById('btn-back-3');
+        const btnDownload = document.getElementById('btn-download');
+        const btnDownloadFinal = document.getElementById('btn-download-final');
+        const btnNewValidation = document.getElementById('btn-new-validation');
+        
+        const previewTable = document.getElementById('preview-table');
+        const logContainer = document.getElementById('log-container');
+        
+        const totalRowsEl = document.getElementById('total-rows');
+        const validRowsEl = document.getElementById('valid-rows');
+        const errorRowsEl = document.getElementById('error-rows');
+        
+        // ============================
+        // EVENT LISTENERS & INICIALIZAÇÃO
+        // ============================
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM carregado - Inicializando aplicação');
+            initializeWorker(); 
+            initializeEventListeners();
+        });
+        
+        function initializeEventListeners() {
+            console.log('Inicializando event listeners...');
+            
+            uploadArea.addEventListener('click', () => fileInput.click());
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileUpload();
+                }
+            });
+            
+            fileInput.addEventListener('change', handleFileUpload);
+            
+            btnNext1.onclick = () => {
+                console.log('Botão Avançar clicado');
+                showStep(2);
+            };
+            
+            btnBack2.onclick = () => {
+                console.log('Botão Voltar clicado');
+                showStep(1);
+            };
+            
+            btnValidate.onclick = () => {
+                console.log('Botão Validar clicado');
+                validateSpreadsheet();
+            };
+            
+            btnDownloadTemplate.addEventListener('click', downloadTemplate);
+            btnBack3.addEventListener('click', () => showStep(2));
+            btnDownload.addEventListener('click', downloadSpreadsheet);
+            btnDownloadFinal.addEventListener('click', downloadSpreadsheet);
+            btnNewValidation.addEventListener('click', resetApp);
+            
+            // NOVO: Inicializa o listener no cartão de erro
+            initializeErrorNavigation(); 
+
+            console.log('Event listeners inicializados com sucesso');
+        }
+
+        // NOVO: Inicializa o Web Worker e define o handler de mensagens
+        function initializeWorker() {
+            if (window.Worker) {
+                // Tenta criar o worker no arquivo local 'worker.js'
+                dataProcessorWorker = new Worker('worker.js'); 
+                dataProcessorWorker.onmessage = handleWorkerMessage;
+                dataProcessorWorker.onerror = (e) => {
+                    console.error('Erro no Web Worker:', e);
+                    loadingOverlay.style.display = 'none';
+                    alert('Erro grave no Web Worker. O processamento foi interrompido.');
+                    resetApp();
+                };
+            } else {
+                alert('Seu navegador não suporta Web Workers. A aplicação pode travar com arquivos grandes.');
+            }
+        }
+        
+        // ============================
+        // FUNÇÕES WORKER HANDLERS
+        // ============================
+
+        // Handler de mensagens do Worker
+        function handleWorkerMessage(e) {
+            const { status, action, errors, headers: newHeaders, spreadsheetData: newData, validationResults: newResults, correctedSpreadsheetData, message, progress, processedRows, totalRows } = e.data;
+
+            // --- Etapa 1: Processamento do Arquivo ---
+            if (action === 'FILE_PROCESSED') {
+                progressContainer.style.display = 'none';
+                
+                if (status === 'success') {
+                    headers = newHeaders;
+                    spreadsheetData = newData;
+                    layoutValid = true;
+                    
+                    const existingErrors = step1.querySelectorAll('.layout-error');
+                    existingErrors.forEach(error => error.remove());
+                    
+                    progressText.textContent = `Planilha importada com sucesso! ${spreadsheetData.length} linhas processadas.`;
+                    btnNext1.disabled = false;
+                } else if (status === 'error') {
+                    layoutValid = false;
+                    progressBar.style.backgroundColor = 'var(--danger)';
+                    btnNext1.disabled = true;
+
+                    if (e.data.type === 'layout') {
+                        progressText.textContent = 'Problemas encontrados no layout da planilha.';
+                        showLayoutErrors(errors);
+                    } else if (e.data.type === 'processing') {
+                        progressText.textContent = `Erro ao processar planilha. Detalhes: ${message}`;
+                    }
+                }
+            } 
+            
+            // --- Etapa 3: Validação de Dados ---
+            else if (action === 'VALIDATION_START') {
+                loadingOverlay.style.display = 'flex';
+                loadingOverlay.querySelector('p').textContent = 'Validando planilha... 0%';
+            }
+            else if (action === 'VALIDATION_PROGRESS') {
+                loadingOverlay.querySelector('p').textContent = `Validando planilha... ${progress}% (${processedRows}/${totalRows} linhas)`;
+            }
+            else if (action === 'VALIDATION_COMPLETED') {
+                validationResults = newResults;
+                spreadsheetData = correctedSpreadsheetData; // Atualiza dados com correções automáticas
+                
+                updateStats();
+                loadingOverlay.style.display = 'none';
+                btnValidate.disabled = false;
+                showStep(3); // Avança para a tela de resultados
+            }
+        }
+
+        // Função auxiliar para exibir erros de layout
+        function showLayoutErrors(layoutErrors) {
+            const errorHtml = `
+                <div class="layout-error">
+                    <h3>❌ A planilha não respeita o layout padrão</h3>
+                    <p>Foram encontrados os seguintes problemas:</p>
+                    <ul>
+                        ${layoutErrors.map(error => `<li>${error}</li>`).join('')}
+                    </ul>
+                    <p>Faça o download do modelo padrão e ajuste sua planilha.</p>
+                </div>
+            `;
+            
+            const existingErrors = step1.querySelectorAll('.layout-error');
+            existingErrors.forEach(error => error.remove());
+            
+            step1.insertAdjacentHTML('beforeend', errorHtml);
+        }
+
+        // ============================
+        // FUNÇÕES DE NAVEGAÇÃO E LÓGICA
+        // ============================
+        
+        // FUNÇÃO DE NAVEGAÇÃO DE PASSOS (AGORA COM RESET DE ÍNDICE)
+        function showStep(step) {
+            console.log(`Mudando para etapa ${step}`);
+            
+            // Atualizar indicadores de progresso
+            stepIndicators.forEach((indicator, index) => {
+                indicator.classList.remove('active', 'completed');
+                if (index + 1 === step) {
+                    indicator.classList.add('active');
+                } else if (index + 1 < step) {
+                    indicator.classList.add('completed');
+                }
+            });
+            
+            // Esconder todas as etapas
+            step1.classList.remove('active');
+            step2.classList.remove('active');
+            step3.classList.remove('active');
+            successScreen.style.display = 'none';
+            
+            // Mostrar a etapa atual
+            if (step === 1) {
+                step1.classList.add('active');
+            } else if (step === 2) {
+                step2.classList.add('active');
+                renderPreviewTable();
+            } else if (step === 3) {
+                step3.classList.add('active');
+                renderValidationLog();
+                // MELHORIA: Reseta o índice de erro ao entrar na tela de Logs
+                currentErrorLogIndex = 0; 
+            } else if (step === 4) {
+                successScreen.style.display = 'block';
+            }
+            
+            currentStep = step;
+        }
+
+        // FUNÇÃO DE RESET DA APLICAÇÃO (AGORA COM RESET DE ÍNDICE)
+        function resetApp() {
+            spreadsheetData = [];
+            headers = [];
+            validationResults = [];
+            layoutValid = false;
+            
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            btnNext1.disabled = true;
+            progressContainer.style.display = 'none';
+            
+            const layoutErrors = step1.querySelectorAll('.layout-error');
+            layoutErrors.forEach(error => error.remove());
+            
+            // MELHORIA: Reseta o índice de erro
+            currentErrorLogIndex = 0;
+            
+            showStep(1);
+        }
+
+        // FUNÇÃO DE UPLOAD (MANTIDA)
+        function handleFileUpload() {
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            if (!['xlsx', 'csv'].includes(fileExtension)) {
+                alert('Por favor, selecione um arquivo XLSX ou CSV.');
+                return;
+            }
+            
+            // 1. Atualiza UI
+            fileName.textContent = file.name;
+            fileDetails.textContent = `Tamanho: ${formatFileSize(file.size)} | Tipo: ${fileExtension.toUpperCase()}`;
+            fileInfo.style.display = 'block';
+            
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressBar.style.backgroundColor = 'var(--primary)';
+            progressText.textContent = 'Lendo arquivo...';
+            btnNext1.disabled = true;
+
+            // 2. Lê o arquivo como ArrayBuffer
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const fileArrayBuffer = e.target.result;
+                progressText.textContent = 'Processando dados no Worker...';
+                progressBar.style.width = '100%';
+
+                // 3. Envia para o Web Worker
+                dataProcessorWorker.postMessage({ 
+                    action: 'PROCESS_FILE', 
+                    payload: { fileArrayBuffer } 
+                }, [fileArrayBuffer]); // Transferência de buffer para otimização
+            };
+            
+            reader.onerror = function() {
+                progressText.textContent = 'Erro ao ler arquivo. Tente novamente.';
+                progressBar.style.backgroundColor = 'var(--danger)';
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        // FUNÇÃO DE NAVEGAÇÃO DE ERROS (A MELHORIA)
+        function initializeErrorNavigation() {
+            const statErrorCard = document.querySelector('.stat-error');
+            if (statErrorCard) {
+                statErrorCard.addEventListener('click', scrollToNextErrorLog);
+            }
+        }
+        
+        function scrollToNextErrorLog() {
+            const errorLogs = logContainer.querySelectorAll('.log-error');
+            
+            if (errorLogs.length === 0 || currentStep !== 3) {
+                console.log('Nenhum erro de log para navegar ou não está na Etapa 3.');
+                return; 
+            }
+
+            // Pega o elemento de log de erro no índice atual
+            const nextErrorLog = errorLogs[currentErrorLogIndex];
+
+            if (nextErrorLog) {
+                // 1. Rola o contêiner de log para o elemento
+                nextErrorLog.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                // 2. Adiciona um destaque temporário
+                nextErrorLog.classList.add('highlight-cell'); 
+                setTimeout(() => {
+                    nextErrorLog.classList.remove('highlight-cell');
+                }, 3000);
+                
+                // 3. Atualiza o índice, ciclando de volta para o primeiro
+                currentErrorLogIndex = (currentErrorLogIndex + 1) % errorLogs.length;
+                
+            } else {
+                // Reinicia o ciclo (se o índice atual estiver fora do array por algum motivo)
+                currentErrorLogIndex = 0;
+                scrollToNextErrorLog(); 
+            }
+        }
+        
+        // MANTIDAS: Funções de visualização e utilidade
+        
+        function downloadTemplate() {
+            const worksheetData = [
+                expectedLayout, // Cabeçalhos
+                ...Array(5).fill().map(() => expectedLayout.map(() => '')) // 5 linhas vazias
+            ];
+            
+            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Modelo');
+            
+            XLSX.writeFile(workbook, 'modelo_planilha.xlsx');
+        }
+        
+        function renderPreviewTable() {
+            const thead = previewTable.querySelector('thead');
+            const tbody = previewTable.querySelector('tbody');
+            
+            // Limpar tabela
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+            
+            // Adicionar cabeçalhos
+            const headerRow = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            
+            // Adicionar dados
+            spreadsheetData.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.dataset.rowIndex = row._rowIndex;
+                
+                if (validationResults.length > 0) {
+                    const rowValidation = validationResults.find(r => r.rowIndex === row._rowIndex);
+                    if (rowValidation) {
+                        if (rowValidation.isValid) {
+                            tr.classList.add('row-valid');
+                        } else {
+                            tr.classList.add('row-error');
+                        }
+                    }
+                }
+                
+                headers.forEach(header => {
+                    const td = document.createElement('td');
+                    td.contentEditable = true;
+                    td.classList.add('editable-cell');
+                    td.textContent = row[header] || '';
+                    
+                    if (validationResults.length > 0) {
+                        const rowValidation = validationResults.find(r => r.rowIndex === row._rowIndex);
+                        if (rowValidation && !rowValidation.isValid) {
+                            const error = rowValidation.errors.find(e => e.column === header);
+                            if (error) {
+                                td.classList.add('error-cell');
+                            }
+                        }
+                    }
+                    
+                    // Salvar edição ao pressionar Enter ou perder o foco
+                    td.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            td.blur();
+                        }
+                    });
+                    td.addEventListener('blur', () => {
+                        // Atualizar dados no array principal
+                        row[header] = td.textContent;
+                    });
+                    
+                    tr.appendChild(td);
+                });
+                
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function validateSpreadsheet() {
+            console.log('Iniciando validação da planilha...');
+            
+            if (!layoutValid) {
+                alert('A planilha não está com o layout correto. Corrija o layout antes de validar.');
+                return;
+            }
+            
+            btnValidate.disabled = true;
+            
+            dataProcessorWorker.postMessage({ 
+                action: 'VALIDATE_DATA', 
+                payload: { data: spreadsheetData } 
+            });
+        }
+        
+        function renderValidationLog() {
+            logContainer.innerHTML = '';
+            
+            validationResults.forEach(result => {
+                const logItem = document.createElement('div');
+                logItem.classList.add('log-item');
+                
+                if (result.isValid) {
+                    logItem.classList.add('log-success');
+                    
+                    let correctionsHtml = '';
+                    if (result.corrections.length > 0) {
+                        correctionsHtml = `<div class="log-message"><strong>Correções automáticas aplicadas:</strong><br>`;
+                        result.corrections.forEach(correction => {
+                            correctionsHtml += `• ${correction.column}: "${correction.from}" → "${correction.to}"<br>`;
+                        });
+                        correctionsHtml += `</div>`;
+                    }
+                    
+                    logItem.innerHTML = `
+                        <div class="log-row-info">Linha ${result.rowIndex}: Válida</div>
+                        ${correctionsHtml}
+                    `;
+                } else {
+                    logItem.classList.add('log-error');
+                    let errorsHtml = '';
+                    result.errors.forEach(error => {
+                        errorsHtml += `<div>• ${error.column}: ${error.message}</div>`;
+                    });
+                    
+                    let correctionsHtml = '';
+                    if (result.corrections.length > 0) {
+                        correctionsHtml = `<div style="margin-top: 10px;"><strong>Correções aplicadas:</strong><br>`;
+                        result.corrections.forEach(correction => {
+                            correctionsHtml += `• ${correction.column}: "${correction.from}" → "${correction.to}"<br>`;
+                        });
+                        correctionsHtml += `</div>`;
+                    }
+                    
+                    logItem.innerHTML = `
+                        <div class="log-row-info">Linha ${result.rowIndex}: Erros encontrados</div>
+                        <div class="log-message">${errorsHtml}</div>
+                        ${correctionsHtml}
+                        <button class="btn btn-warning btn-fix" data-row="${result.rowIndex}" style="margin-top: 10px; padding: 8px 15px;">
+                            <i>🔧</i> Corrigir
+                        </button>
+                    `;
+                    
+                    const fixButton = logItem.querySelector('.btn-fix');
+                    fixButton.addEventListener('click', () => {
+                        showStep(2);
+                        setTimeout(() => {
+                            const rowElement = document.querySelector(`tr[data-row-index="${result.rowIndex}"]`);
+                            if (rowElement) {
+                                rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                
+                                rowElement.classList.add('highlight-cell');
+                                setTimeout(() => {
+                                    rowElement.classList.remove('highlight-cell');
+                                }, 3000);
+                                
+                                const firstErrorColumn = result.errors[0].column;
+                                const errorCell = rowElement.querySelector(`td:nth-child(${headers.indexOf(firstErrorColumn) + 1})`);
+                                if (errorCell) {
+                                    errorCell.focus();
+                                }
+                            }
+                        }, 500);
+                    });
+                }
+                
+                logContainer.appendChild(logItem);
+            });
+            
+            const hasErrors = validationResults.some(result => !result.isValid);
+            btnDownload.disabled = hasErrors;
+        }
+        
+        function updateStats() {
+            const totalRows = validationResults.length;
+            const validRows = validationResults.filter(r => r.isValid).length;
+            const errorRows = totalRows - validRows;
+            
+            totalRowsEl.textContent = totalRows;
+            validRowsEl.textContent = validRows;
+            errorRowsEl.textContent = errorRows;
+        }
+        
+        function downloadSpreadsheet() {
+            const worksheetData = [
+                headers, // Cabeçalhos
+                ...spreadsheetData.map(row => headers.map(header => row[header]))
+            ];
+            
+            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Planilha Validada');
+            
+            XLSX.writeFile(workbook, 'planilha_validada.xlsx');
+            
+            showStep(4);
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>
