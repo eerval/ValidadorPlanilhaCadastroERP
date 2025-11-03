@@ -83,21 +83,22 @@ function validateLayout(headers) {
 }
 
 // ==========================================================
-// CORREÇÃO FINAL: FUNÇÃO DE LIMPEZA E NORMALIZAÇÃO DE PREÇOS
-// Inclui formatação final com vírgula para exportação BR.
+// FUNÇÃO DE LIMPEZA E NORMALIZAÇÃO DE PREÇOS (VERSÃO FINAL PARA XLSX)
+// Retorna uma STRING com PONTO DECIMAL, o que a SheetJS consegue converter
+// corretamente para um número flutuante no Excel.
 // ==========================================================
 /**
- * Limpa, normaliza para float JS e formata com duas casas decimais no padrão BR (vírgula).
+ * Limpa, normaliza para float JS (ponto decimal) e formata com duas casas decimais.
  * @param {string} value O valor do campo de preço.
- * @returns {string} O valor limpo e formatado com duas casas decimais (ex: "1234,56" ou "0,00").
+ * @returns {string} O valor limpo e formatado com duas casas decimais no padrão JS (ex: "1234.56").
  */
 function cleanAndNormalizePrice(value) {
     if (value === null || value === undefined) {
-        return '0,00';
+        return '0.00';
     }
     let strValue = String(value).trim();
     if (strValue === '') {
-        return '0,00';
+        return '0.00';
     }
 
     // 1. Remove R$, e espaços
@@ -113,15 +114,12 @@ function cleanAndNormalizePrice(value) {
 
     // 4. Verifica se é válido
     if (isNaN(numericValue) || numericValue < 0) {
-        return '0,00';
+        return '0.00';
     }
 
-    // 5. Formata o número com 2 casas decimais (padrão JS com ponto)
-    let formattedValue = numericValue.toFixed(2); 
-
-    // 6. A CHAVE DA CORREÇÃO: Troca o ponto decimal de volta para vírgula para a saída no Excel BR
-    // Ex: "1250.99" vira "1250,99"
-    return formattedValue.replace('.', ','); 
+    // A CHAVE FINAL: Formata o número com exatamente 2 casas decimais e RETORNA COM PONTO.
+    // A SheetJS/XLSX deve reconhecer esta string como um número flutuante.
+    return numericValue.toFixed(2); 
 }
 
 // 4. Lógica de Validação e Correção de Dados (Movida do HTML)
@@ -210,7 +208,7 @@ function runDataValidation(spreadsheetData) {
                 const numericKey = origemValue.replace(/[^0-9]/g, '');
                 if (origemMercadoriaRepo[numericKey]) {
                     const newValue = origemMercadoriaRepo[numericKey];
-                    corrections.push({ column: 'ORIGEM DO PRODUTO', from: row['ORIGEM DO PRODUTO'], to: newValue });
+                    corrections.push({ column: 'ORIGEM DO PRODUTO', from: row['ORIGEM DO PRODUCTO'], to: newValue });
                     row['ORIGEM DO PRODUTO'] = newValue;
                 } else {
                     errors.push({ column: 'ORIGEM DO PRODUTO', message: 'Valor não encontrado no repositório' });
@@ -257,35 +255,35 @@ function runDataValidation(spreadsheetData) {
         const precoCustoCorrigido = cleanAndNormalizePrice(precoCustoOriginal);
         
         if (precoCustoCorrigido !== precoCustoOriginal.toString().trim()) {
-            corrections.push({ column: 'PREÇO DE CUSTO', from: precoCustoOriginal, to: precoCustoCorrigido });
+            // A correção deve mostrar o valor corrigido no formato BR para o log,
+            // mas o array interno deve manter o formato US (ponto) para o XLSX
+            const precoCustoLog = precoCustoCorrigido.replace('.', ','); 
+            corrections.push({ column: 'PREÇO DE CUSTO', from: precoCustoOriginal, to: precoCustoLog });
         }
-        row['PREÇO DE CUSTO'] = precoCustoCorrigido;
+        row['PREÇO DE CUSTO'] = precoCustoCorrigido; // Salva com PONTO
         
         // PREÇO DE VENDA - Validação e correção
         const precoVendaOriginal = row['PREÇO DE VENDA'];
         const precoVendaCorrigido = cleanAndNormalizePrice(precoVendaOriginal);
         
         if (precoVendaCorrigido !== precoVendaOriginal.toString().trim()) {
-            corrections.push({ column: 'PREÇO DE VENDA', from: precoVendaOriginal, to: precoVendaCorrigido });
+            const precoVendaLog = precoVendaCorrigido.replace('.', ','); 
+            corrections.push({ column: 'PREÇO DE VENDA', from: precoVendaOriginal, to: precoVendaLog });
         }
-        row['PREÇO DE VENDA'] = precoVendaCorrigido;
+        row['PREÇO DE VENDA'] = precoVendaCorrigido; // Salva com PONTO
         
-        // Dimensões e pesos - Preencher com 0
+        // Dimensões e pesos - Preencher com 0 e formatar
         const dimensionFields = ['ALTURA (cm)', 'LARGURA (cm)', 'PROFUNDIDADE (cm)', 'PESO LIQUIDO (kg)', 'PESO BRUTO (kg)'];
         
         dimensionFields.forEach(field => {
-            if (!row[field] || row[field].toString().trim() === '') {
-                corrections.push({ column: field, from: '', to: '0,00' });
-                row[field] = '0,00';
-            } else {
-                // Aplica a mesma lógica de limpeza e formatação para dimensões/pesos
-                const original = row[field];
-                const clean = cleanAndNormalizePrice(original);
-                if (clean !== original.toString().trim()) {
-                     corrections.push({ column: field, from: original, to: clean });
-                }
-                row[field] = clean;
+            const original = row[field];
+            const clean = cleanAndNormalizePrice(original);
+            
+            if (clean !== original.toString().trim()) {
+                 const logValue = clean.replace('.', ',');
+                 corrections.push({ column: field, from: original, to: logValue });
             }
+            row[field] = clean; // Salva com PONTO
         });
         
         // ID Interno - Deve estar vazio
