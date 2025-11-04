@@ -84,14 +84,15 @@ function validateLayout(headers) {
 }
 
 // ==========================================================
-// FUNÇÃO DE LIMPEZA E NORMALIZAÇÃO DE PREÇOS (CORREÇÃO CRÍTICA)
-// MANTIDA SEM ALTERAÇÕES, POIS SÓ FAZ A LIMPEZA DOS CARACTERES
+// CORREÇÃO CRÍTICA: FUNÇÃO DE LIMPEZA E NORMALIZAÇÃO DE PREÇOS
+// Inclui curto-circuito para proteger valores já limpos na revalidação.
 // ==========================================================
 /**
- * Limpa e normaliza um valor de preço (R$ 1.234,56) para o formato numérico do JS (1234.56).
- * 1. Remove caracteres monetários e espaços.
- * 2. Remove o ponto (.) usado como separador de milhar no BR.
- * 3. Substitui a vírgula (,) por ponto (.) para o JS.
+ * Limpa e normaliza um valor de preço (ex: R$ 1.234,56) para o formato numérico do JS (1234.56).
+ * 1. Implementa curto-circuito para valores já limpos.
+ * 2. Remove apenas 'R', '$' e espaços (Requisito 2).
+ * 3. Remove o separador de milhar (ponto).
+ * 4. Substitui a vírgula (,) por ponto (.) para o JS.
  * @param {string} value O valor do campo de preço.
  * @returns {string} O valor limpo e formatado como string (ex: "1234.56").
  */
@@ -104,7 +105,14 @@ function cleanAndNormalizePrice(value) {
         return '';
     }
 
-    // 1. Remove R$, e espaços
+    // NOVO CURTO-CIRCUITO: Verifica se o valor JÁ está no formato JS (ponto decimal, sem vírgula ou R$)
+    // Se a string não tem vírgula, nem "R$", e corresponde a um número com ponto decimal opcional, 
+    // consideramos que já foi limpa e retornamos o valor.
+    if (!strValue.includes(',') && !strValue.includes('R$') && /^\d*\.?\d*$/.test(strValue)) {
+         return strValue;
+    }
+
+    // 1. Remove apenas 'R', '$' e espaços. (Requisito revisado)
     strValue = strValue.replace(/[R$\s]/g, ''); 
     
     // 2. Remove o separador de milhar (ponto)
@@ -118,7 +126,7 @@ function cleanAndNormalizePrice(value) {
     return strValue;
 }
 
-// 4. Lógica de Validação e Correção de Dados (Movida do HTML)
+// 4. Lógica de Validação e Correção de Dados
 function runDataValidation(spreadsheetData) {
     const results = [];
     
@@ -248,72 +256,56 @@ function runDataValidation(spreadsheetData) {
         }
         
         // ==========================================================
-        // AJUSTE REQUISITO 2: PREÇO DE CUSTO
-        // REMOVIDA VALIDAÇÃO DE isNaN E < 0. MANTIDA APENAS A LIMPEZA E PREENCHIMENTO COM '0'.
+        // PREÇO DE CUSTO (VALIDAÇÃO REMOVIDA, APENAS LIMPEZA ROBUSTA)
         // ==========================================================
         const precoCustoOriginal = row['PREÇO DE CUSTO'];
-        const precoCustoLimpo = cleanAndNormalizePrice(precoCustoOriginal); // Limpeza de R$, . e ,
+        const precoCustoLimpo = cleanAndNormalizePrice(precoCustoOriginal);
         
         if (precoCustoLimpo === '') {
             const newValue = '0';
-            // Garante que a correção seja registrada se não for '0'
             if (precoCustoOriginal && precoCustoOriginal.toString().trim() !== '0') {
                 corrections.push({ column: 'PREÇO DE CUSTO', from: precoCustoOriginal, to: newValue });
             }
-            row['PREÇO DE CUSTO'] = newValue; // Preenche com '0' se estiver vazio
+            row['PREÇO DE CUSTO'] = newValue;
         } else {
-            // Mantemos o valor limpo e normalizado (ex: "1234.56") para o array
-            // APENAS REGISTRA CORREÇÃO SE O VALOR MUDOU (DEVIDO À LIMPEZA)
             if (precoCustoLimpo !== precoCustoOriginal.toString().trim()) {
                 corrections.push({ column: 'PREÇO DE CUSTO', from: precoCustoOriginal, to: precoCustoLimpo });
             }
             row['PREÇO DE CUSTO'] = precoCustoLimpo;
-            
-            // NOTE: A VALIDAÇÃO DE FORMATO OU SINAL (isNaN ou < 0) FOI REMOVIDA CONFORME SOLICITADO
         }
         
         // ==========================================================
-        // AJUSTE REQUISITO 2: PREÇO DE VENDA
-        // REMOVIDA VALIDAÇÃO DE isNaN E < 0. MANTIDA APENAS A LIMPEZA E PREENCHIMENTO COM '0'.
+        // PREÇO DE VENDA (VALIDAÇÃO REMOVIDA, APENAS LIMPEZA ROBUSTA)
         // ==========================================================
         const precoVendaOriginal = row['PREÇO DE VENDA'];
-        const precoVendaLimpo = cleanAndNormalizePrice(precoVendaOriginal); // Limpeza de R$, . e ,
+        const precoVendaLimpo = cleanAndNormalizePrice(precoVendaOriginal);
         
         if (precoVendaLimpo === '') {
             const newValue = '0';
-            // Garante que a correção seja registrada se não for '0'
             if (precoVendaOriginal && precoVendaOriginal.toString().trim() !== '0') {
                 corrections.push({ column: 'PREÇO DE VENDA', from: precoVendaOriginal, to: newValue });
             }
-            row['PREÇO DE VENDA'] = newValue; // Preenche com '0' se estiver vazio
+            row['PREÇO DE VENDA'] = newValue;
         } else {
-            // Mantemos o valor limpo e normalizado (ex: "1234.56") para o array
-            // APENAS REGISTRA CORREÇÃO SE O VALOR MUDOU (DEVIDO À LIMPEZA)
             if (precoVendaLimpo !== precoVendaOriginal.toString().trim()) {
                 corrections.push({ column: 'PREÇO DE VENDA', from: precoVendaOriginal, to: precoVendaLimpo });
             }
             row['PREÇO DE VENDA'] = precoVendaLimpo;
-            
-            // NOTE: A VALIDAÇÃO DE FORMATO OU SINAL (isNaN ou < 0) FOI REMOVIDA CONFORME SOLICITADO
         }
         
         // ==========================================================
-        // AJUSTE REQUISITO 1: DIMENSÕES E PESOS
-        // REMOVIDA A VALIDAÇÃO. MANTIDA APENAS A CORREÇÃO DE PREENCHER COM '0'.
+        // DIMENSÕES E PESOS (VALIDAÇÃO REMOVIDA, APENAS PREENCHIMENTO)
         // ==========================================================
         const dimensionFields = ['ALTURA (cm)', 'LARGURA (cm)', 'PROFUNDIDADE (cm)', 'PESO LIQUIDO (kg)', 'PESO BRUTO (kg)'];
         
         dimensionFields.forEach(field => {
             // Se o campo estiver vazio, corrige para '0'.
             if (!row[field] || row[field].toString().trim() === '') {
-                // Adiciona correção APENAS se o valor estava vazio para evitar logs desnecessários
-                // (O código original preenchia com '0' se estivesse vazio. Mantive a lógica.)
                 if (row[field] !== '0') { 
                     corrections.push({ column: field, from: row[field] || '', to: '0' });
                 }
                 row[field] = '0';
             }
-            // NOTE: Qualquer outra validação de formato ou número foi removida.
         });
         
         // ID Interno - Deve estar vazio
